@@ -1,0 +1,312 @@
+// Copyright 2010 wtwf.com, All Rights Reserved.
+// Created by: Alex K (wtwf.com)
+
+var RCS_REVISION = "$Revision: 1.6 $";
+
+var confirm_for_delete = false;
+var confirm_for_keep_going = true;
+var delete_everything = false;
+
+// only delete things older than 30 days
+var minimum_age_to_delete = 23;
+var max_number_of_items_on_page = 10000;
+
+function requestReceived(request, sender, sendResponse) {
+  console.log('*** GOT A MESSAGE ***\n' +
+              (sender.tab ?
+               'from a content script:' + sender.tab.url :
+               'from the extension'));
+  sendResponse({msg: 'got your message'});
+}
+
+
+function startPurge(){
+
+  chrome.extension.onRequest.addListener(requestReceived);
+
+  if (fb_purge()) {
+    if (loadMoreStories()) {
+      if (!confirm_for_keep_going || confirm('keep going?')){
+        console.log('keeping on going!');
+        window.setTimeout(startPurge, 1000);
+      }
+    }
+  }
+}
+
+function fb_purge() {
+
+  var skippedCount = 0;
+  var fb_dtsg = $('input[name="fb_dtsg"]').val();
+  console.log('fb_dtsg=' + fb_dtsg);
+
+  var els = $('.storyContent,.uiStreamStory');
+  console.log('found ' + els.length + ' stories: ');
+  var deleting = false;
+  var lastGoodEl = null;
+
+  for (var i = 0; i < els.length; i++) {
+    var el = els[i];
+    var thingsToRemove = [];
+    var stop_looping_and_start_again_later = false;
+    var openedWindow = null;
+
+    if (lastGoodEl && el == lastGoodEl) {
+      deleting = true;
+      continue;
+    }
+
+    skippedCount++;
+    if (!deleting) {
+      var diff = howOld(el);
+      if (diff > 0) {
+        console.log('skipped: ' + skippedCount + ' : ' +
+                    String(diff).substring(0,4) + " days ago ");
+
+        // work out if we wan't to delete or not?
+     	if (delete_everything ||
+            (minimum_age_to_delete > 0 &&
+             diff > minimum_age_to_delete) ||
+            (max_number_of_items_on_page > 0 &&
+             skippedCount > max_number_of_items_on_page)) {
+          console.log('STARTING TO DELETE! diff: ' +
+                      String(diff).substring(0,4) +
+                      ' skippedCount: ' + skippedCount);
+          deleting = true;
+        } else {
+          lastGoodEl = el;
+          continue;
+        }
+      } else {
+        // console.log('no date');
+        if (!deleting) {
+          continue;
+        }
+      }
+    }
+
+    var mesel = $(el).find('.messageBody')[0];
+    var me = 'unknown story!';
+
+    if (mesel && mesel.innerText) {
+      me = mesel.innerText;
+    } else {
+      // TODO(ark) make it delete the real comment too.
+      mesel = $(el).find('.ministoryMessage')[0];
+      if (mesel && mesel.innerText) {
+        me = mesel.innerText;
+      }
+    }
+
+    var cel = $(el).find('.uiCloseButton')[0];
+    if (cel) {
+      var ajaxify = $(cel).attr('ajaxify');
+      var args = getrequestargs(ajaxify);
+      // console.log('found close button for: ' + me );
+      // build up the query to delete the post....
+      // dumpMap(args);
+
+      var form = {action_key: 'remove_content',
+                  'story_fbids[0]': args['story_fbids[0]'],
+                  subject_name: 'Links',
+                  dialog: 1,
+                  ministory_key: args['ministory_key'],
+                  profile_fbid: args['profile_fbid'],
+                  story_type: args['story_type'],
+                  feedback: 1,
+                  story_id: args['story_id'],
+                  app_id: 2309869772,
+                  'nctr[_mod]': 'pagelet_wall',
+                  post_form_id: '874d2050254f1d06deae25c102385cf7',
+                  fb_dtsg: fb_dtsg,
+                  lsd: '',
+                  post_form_id_source: 'AsyncRequest',
+                  confirmed: 1};
+
+      // TODO(ark) make this true bit a flag you can turn on and off.
+      if (true && !confirm_for_delete || confirm('delete post?\n' + me)) {
+        //form = {};
+        console.log('deleting: ' + me);
+
+        // $.post('https://www.facebook.com/ajax/minifeed.php?__a=1',
+        //       encodeMap(form));
+
+        // TODO(ark) remove this from the page
+        // thingsToRemove.push(el);
+      }
+    }
+    // perhaps it was a permalink to a status and not a story so try
+    // and delete that.
+    if (mesel) {
+      console.log('looking for permalink in:\n' + mesel.innerText);
+      // try and find a link to a
+      var permlink = $(mesel).find('a[href*="permalink.php?story_fbid="],a[href*="/posts/"],a[href*="/photo.php?fbid="]')[0];
+      if (permlink) {
+        var href = $(permlink).attr('href');
+        console.log('found a permalink! ' + href);
+        var openedWindow = window.open(href + '#fbpurge');
+        console.log('openedWindow: ' + openedWindow);
+        thingsToRemove.push(el);
+        stop_looping_and_start_again_later = true;
+      }
+    }
+
+    for (var i = 0; i < thingsToRemove.length; i++) {
+      $(thingsToRemove[i]).remove();
+    }
+    if (stop_looping_and_start_again_later) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function howOld(el) {
+  var del = $(el).find('[data-date*=" "]')[0];
+  var diff = -1;
+  if (del) {
+    var d = $(del).attr('data-date');
+    diff = ((new Date().getTime() - new Date(d).getTime()) /
+            (1000 * 60 * 60 * 24));
+  }
+  return diff;
+}
+
+// urlencode a map but do not encode the keys.
+// we have to do this since facebook wants keys like story_fbids[0]
+// without the [] encoded.
+function encodeMap(map) {
+  ans = []
+
+  $.each(map, function(x) { ans.push(x + '=' + encodeURIComponent(map[x])) });
+
+  return ans.join('&');
+}
+
+function dumpMap(map) {
+  for (x in map) {
+    console.log(x + ': ' + map[x]);
+  }
+}
+
+function getrequestargs(url) {
+  var args = new Object();
+  url = String(url);
+  var idx = url.indexOf("?");
+  if (idx >= 0) {
+    var s = url.substring(idx + 1);
+    var pairs = s.split("&");
+    for (var i = 0; i < pairs.length; i++) {
+      var idx = pairs[i].indexOf("=");
+      if (idx > 0) {
+        pairs[i] = pairs[i].replace(/\+/g, " ");
+        var key = decodeURIComponent(pairs[i].substring(0, idx));
+        var value = decodeURIComponent(pairs[i].substring(idx + 1));
+        args[key] = value;
+      }
+    }
+  }
+  return args;
+}
+
+
+
+function loadMoreStories() {
+  // now look for a more button, click it and start again...
+  var el = $('.uiMorePagerPrimary')[0];
+  if (el) {
+    var evObj = document.createEvent('MouseEvents');
+    evObj.initEvent( 'click', true, true );
+    el.dispatchEvent(evObj);
+    console.log('Loading more stories');
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Adds a social purge link to the top of the worker tab.
+ */
+function renderSocialPurgeLink() {
+  var socialPurgeLink = $('#pageNav a:contains("Home")').parent().clone();
+  $('a', socialPurgeLink)
+      .attr('id', 'social-purge-link')
+      .attr('href', 'javascript:void(0);')
+      .text('Purge')
+      .css('color', 'white')
+      .click(startPurge);
+  $(socialPurgeLink).attr('id', '');
+  $('#pageNav a:contains("Home")').parent().after(socialPurgeLink);
+}
+
+function clickConfirm() {
+  var els = $('.uiButtonConfirm');
+  console.log('found ' + els.length + ' confirm buttons');
+  for (var i = 0; i < els.length; i++) {
+    var el = els[i];
+    if (el) {
+      el = el.firstChild;
+      // TODO(ark) i18n problem here?
+      if (el && el.value == 'Delete') {
+        console.log('confirmed:' + el.value);
+        el.click();
+      } else {
+        console.log('not delete: ' + el.value);
+      }
+    } else {
+      console.log('no findee confirm');
+    }
+  }
+}
+
+
+// called when we are sent to a page with our comments on it.
+function removeMyComments() {
+  // find out what my profile url is
+
+  chrome.extension.sendRequest({msg: "starting to remove comments"},
+                               function(response) {
+                                 console.log('got a reply: ' + response);
+                               });
+
+  var myLink = $('a.topNavLink:contains("Profile")').attr('href');
+
+  var comments = $('.commentContent').filter(':has(a[href="' + myLink + '"])');
+
+  // alert('removing my comments from this page:' + myLink);
+  // alert('comments: ' + comments[0]);
+  if (comments.length > 0) {
+    var el = comments[0];
+    var diff = howOld(el);
+    if (diff > minimum_age_to_delete) {
+      console.log('age: ' + String(diff).substring(0,4) + ' : ' + el.innerText);
+      var cel = $(el.parentNode.parentNode).find('.uiCloseButton')[0];
+      if (cel) {
+        console.log('clicking on close: ' + cel);
+        // dumpMap(cel);
+        cel.firstChild.click();
+        window.setTimeout(clickConfirm, 1000);
+      } else {
+        console.log('no findee close button');
+      }
+      $(el).remove();
+      window.setTimeout(removeMyComments, 2000);
+    } else {
+      console.log('comment is not old enough');
+    }
+  } else {
+    console.log('no comments to delete');
+  }
+  chrome.extension.sendRequest({msg: "done removing comments"},
+                               function(response) {
+                                 console.log('got a reply: ' + response);
+                               });
+}
+
+
+if (window.location.hash && window.location.hash == '#fbpurge') {
+  console.log('Removing my comments from this page');
+  removeMyComments();
+}
+
+renderSocialPurgeLink();

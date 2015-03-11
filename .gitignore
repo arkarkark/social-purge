@@ -1,0 +1,6 @@
+icon*.png
+*.json
+*.js
+bower_components
+node_modules
+vendor
