@@ -5,7 +5,7 @@ version: '0.0.1'
 description: 'Remove old data from social networks.'
 content_scripts: [
   matches: ['https://www.facebook.com/*', 'https://facebook.com/*']
-  js: ['fb.js', 'vendor/jquery.js']
+  js: ['vendor/jquery.js', 'fb.js', 'fb_public_warning.js']
 ]
 page_action:
   default_icon:
