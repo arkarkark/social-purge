@@ -38,3 +38,4 @@ vendor/jquery.js: bower_components/jquery/dist/jquery.min.js
 
 setup: package.json
 	npm install
+	bower install

@@ -8,29 +8,19 @@ return unless location.hostname.match(/facebook\.com/)
 
 highlightPublic = (els) ->
   els.css('background', '#fee')
-
-stopForms = (forms) ->
-  forms.submit((event) ->
-    console.log('submit')
-    event.preventDefault()
-    false
+  likes = $(els).find('.UFILikeLink,.share_action_link').click((event) ->
+    return true if $(event.target).text() == 'Unlike'
+    confirm('This is a puclic ation.\nAre you sure you want to continue?')
   )
+
+  x = $(els).find('[action~="add_comment"]')
+  if x && x.length
+    console.log('[action~="add_comment"]', x)
 
 updateNode = (node) ->
   publicEls = $(node).find('[aria-label~="Public"]')
   highlightPublic(publicEls.closest('.userContentWrapper').parent())
   highlightPublic(publicEls.closest('.uiScrollableAreaBody,.fbPhotoPageInfo'))
-  stopForms(publicEls.closest('form'))
-
-  likes = $(node).find('.UFILikeLink,.share_action_link').click((event) ->
-    return true if $(event.target).text() == 'Unlike'
-    confirm('This is a puclic ation.\nAre you sure you want to continue?')
-  )
-
-  x = $(node).find('[action~="add_comment"]')
-  if x && x.length
-    console.log(x)
-
 
 # watch when things change on the page!
 observer = new MutationObserver((mutations) ->
