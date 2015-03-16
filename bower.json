@@ -1,0 +1,15 @@
+{
+  "name": "social-purge",
+  "version": "0.0.1",
+  "homepage": "https://github.com/arkarkark/social-purge",
+  "authors": [
+    "Alex W (wtwf.com)"
+  ],
+  "description": "removes old data from social networks.",
+  "main": "manifest.json",
+  "license": "MIT",
+  "private": true,
+  "dependencies": {
+    "jquery": "~2.1.3"
+  }
+}
