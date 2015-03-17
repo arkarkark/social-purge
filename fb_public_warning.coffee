@@ -6,21 +6,29 @@
 
 return unless location.hostname.match(/facebook\.com/)
 
+decorateAsPublic = (els) ->
+  els.css('background', '#fff5f5')
+
 highlightPublic = (els) ->
-  els.css('background', '#fee')
-  likes = $(els).find('.UFILikeLink,.share_action_link').click((event) ->
+  decorateAsPublic(els)
+  els.find('.UFILikeLink,.share_action_link').click((event) ->
     return true if $(event.target).text() == 'Unlike'
     confirm('This is a puclic ation.\nAre you sure you want to continue?')
   )
 
-  x = $(els).find('[action~="add_comment"]')
-  if x && x.length
-    console.log('[action~="add_comment"]', x)
+isInPublic = (el) ->
+  x = el.closest('.userContentWrapper,.uiScrollableAreaBody,.fbPhotoPageInfo').find('[aria-label~="Public"]')
+  x && x.length
 
 updateNode = (node) ->
   publicEls = $(node).find('[aria-label~="Public"]')
   highlightPublic(publicEls.closest('.userContentWrapper').parent())
   highlightPublic(publicEls.closest('.uiScrollableAreaBody,.fbPhotoPageInfo'))
+
+  editable = $(node).find('[contenteditable]')
+  if editable && editable.length && isInPublic(editable)
+    decorateAsPublic(editable.closest('.UFIAddCommentInput'))
+
 
 # watch when things change on the page!
 observer = new MutationObserver((mutations) ->
