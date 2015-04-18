@@ -1,7 +1,7 @@
 # Use cson2json from cson-cli (npm) to convert this (Emacs does it for me).
 manifest_version: 2
 name: 'Social Purge'
-version: '0.0.5'
+version: '0.0.6'
 description: 'Remove old data from social networks. Warn on public actions.'
 content_scripts: [
   matches: ['https://www.facebook.com/*', 'https://facebook.com/*']

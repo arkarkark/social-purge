@@ -22,6 +22,7 @@ isInPublic = (el) ->
 
 updateNode = (node) ->
   publicEls = $(node).find('[aria-label~="Public"]')
+  console.log('updateNode', publicEls) if publicEls.length
   highlightPublic(publicEls.closest('.userContentWrapper').parent())
   highlightPublic(publicEls.closest('.uiScrollableAreaBody,.fbPhotoPageInfo'))
 
@@ -42,3 +43,9 @@ config =
   subtree: true
 observer.observe(document.body, config)
 updateNode(document.body)
+window.__updateNode = updateNode
+
+window.setTimeout(
+  -> updateNode(document.body)
+  200
+)
