@@ -1,30 +1,30 @@
 # Use cson2json from cson-cli (npm) to convert this (Emacs does it for me).
 manifest_version: 2
-name: 'Social Purge'
-version: '0.0.6'
-description: 'Remove old data from social networks. Warn on public actions.'
+name: "Social Purge"
+version: "0.0.6"
+description: "Remove old data from social networks. Warn on public actions."
 content_scripts: [
-  matches: ['https://www.facebook.com/*', 'https://facebook.com/*']
-  js: ['vendor/jquery.js', 'fb.js', 'fb_public_warning.js']
+  matches: ["https://www.facebook.com/*", "https://facebook.com/*"]
+  js: ["vendor/jquery.js", "fb.js", "fb_public_warning.js", "fb_purge.js"]
 ,
-  matches: ['https://plus.google.com/*']
-  js: ['vendor/jquery.js', 'plus_public_warning.js']
+  matches: ["https://plus.google.com/*"]
+  js: ["vendor/jquery.js", "plus_public_warning.js"]
 ]
 page_action:
   default_icon:
-    19: 'icon19.png'
-    38: 'icon38.png'
-  default_title: 'Social Purge'
+    19: "icon19.png"
+    38: "icon38.png"
+  default_title: "Social Purge"
 background:
-  scripts: ['background.js']
+  scripts: ["background.js"]
   # persistent: false
 permissions: [
-  '*://*.facebook.com/*'
+  "*://*.facebook.com/*"
 ]
 icons:
-  16: 'icon16.png'
-  48: 'icon48.png'
-  128: 'icon128.png'
+  16: "icon16.png"
+  48: "icon48.png"
+  128: "icon128.png"
 web_accessible_resources: [
-  'vendor/jquery.min.map'
+  "vendor/jquery.min.map"
 ]
