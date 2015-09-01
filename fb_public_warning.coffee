@@ -4,6 +4,8 @@
 # https://www.facebook.com/search/str/amazon/keywords_top
 # https://www.facebook.com/Amazon/photos/a.10150354146103124.344011.9465008123/10152077194838124
 
+return # DO NOT SUBMIT
+
 return unless location.hostname.match(/facebook\.com/)
 
 decorateAsPublic = (els) ->
@@ -34,8 +36,12 @@ updateNode = (node) ->
 # watch when things change on the page!
 observer = new MutationObserver((mutations) ->
   mutations.some((mutation) ->
-    if mutation.addedNodes
-      [].slice.call(mutation.addedNodes).forEach((node) -> updateNode(node))
+    if mutation.addedNodes?.length
+      console.log('added', mutation.addedNodes)
+      [].slice.call(mutation.addedNodes).forEach((node) ->
+        console.log('updateNode', node)
+        updateNode(document.body)
+      )
   )
 )
 config =
@@ -43,9 +49,11 @@ config =
   subtree: true
 observer.observe(document.body, config)
 updateNode(document.body)
-window.__updateNode = updateNode
 
-window.setTimeout(
-  -> updateNode(document.body)
-  200
-)
+window.__ark__updateNode = updateNode
+
+for x in [500, 1000, 1500, 2000]
+  window.setTimeout(
+    -> updateNode(document.body)
+    x
+  )
