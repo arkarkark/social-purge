@@ -74,7 +74,6 @@ purgeMonths = (year, month, promise) ->
       month = 12
       year -= 1
     if year < oldest_year
-      console.log("All Done with purgeMonth", year, month)
       promise.resolve()
     else
       purgeMonths(year, month, promise)
@@ -94,27 +93,42 @@ clickVisibilitySelector = (idx, selectors, promise) ->
   if idx >= selectors.length
     promise.resolve()
     return
-  console.log("Clicking", idx, selectors[idx]) # , selectors)
-
   selectors[idx].click()
   window.setTimeout(
     ->
       deleteMenuItem = $('a[ajaxify^="/ajax/timeline/delete/confirm"]')
-      deleteMenuItem?[0]?.click()
-      window.setTimeout(
-        ->
-          cancelConfirmButton = $('a[role="button"]').filter((idx, x) -> x.innerText?.indexOf("Cancel") != -1)
-          deleteConfirmButton = $("button").filter((idx, x) -> x.innerText?.indexOf("Delete Post") != -1)
-          console.log(deleteConfirmButton)
-          deleteConfirmButton?[0]?.click()
-          # cancelConfirmButton?[0]?.click()
-          # move onto the next one
+      if deleteMenuItem.length
+        console.log("Deleting", idx, selectors[idx]) # , selectors)
+        deleteMenuItem?[0]?.click()
+        window.setTimeout(
+          ->
+            cancelConfirmButton = $('a[role="button"]').filter((idx, x) -> x.innerText?.indexOf("Cancel") != -1)
+            deleteConfirmButton = $("button").filter((idx, x) -> x.innerText?.indexOf("Delete Post") != -1)
+            console.log(deleteConfirmButton)
+            deleteConfirmButton?[0]?.click()
+            # cancelConfirmButton?[0]?.click()
+            # move onto the next one
+            window.setTimeout(
+              ->
+                clickVisibilitySelector(idx + 1, selectors, promise)
+              200 + wiggle()
+            )
+          500 + wiggle()
+        )
+      else
+        # maybe it was an unlike thing?
+        unlike = $('a[ajaxify^="/ajax/timeline/all_activity/remove_content"]')
+        if unlike.length
+          console.log("Unliking", idx, selectors[idx]) # , selectors)
+          unlike[0].click()
           window.setTimeout(
             ->
               clickVisibilitySelector(idx + 1, selectors, promise)
             200 + wiggle()
           )
-        500 + wiggle()
-      )
+        else
+          console.log("Can't click", idx, selectors[idx]) # , selectors)
+
+          clickVisibilitySelector(idx + 1, selectors, promise)
     200 + wiggle()
   )
